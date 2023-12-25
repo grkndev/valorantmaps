@@ -1,118 +1,225 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import axios from "axios";
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
 
-const inter = Inter({ subsets: ['latin'] })
+export default function index() {
+  const [maps, setMaps] = useState([]);
+  const [selectedMaps, setSelectedMaps] = useState<Map[]>([]);
+  const [bannedMaps, setBannedMaps] = useState<Map[]>([]);
+  async function getMaps() {
+    const { data } = await axios.get(
+      "https://valorant-api.com/v1/maps?language=tr-TR"
+    );
+    if (data.status !== 200) return;
 
-export default function Home() {
+    const filteredMaps = data.data.filter(
+      (map: any) => map.coordinates && map.displayName !== "POLİGON"
+    );
+    setMaps(filteredMaps);
+  }
+  useEffect(() => {
+    getMaps();
+  }, []);
+
+  const addSelect = (map: Map) => {
+    if (selectedMaps.includes(map)) return;
+    if (bannedMaps.includes(map)) return;
+    setSelectedMaps((oldMaps) => [...oldMaps, map]);
+  };
+  const addBan = (map: Map) => {
+    if (selectedMaps.includes(map)) return;
+    if (bannedMaps.includes(map)) return;
+    setBannedMaps((oldMaps) => [...oldMaps, map]);
+  };
+
+  const remove = ({
+    value,
+    state,
+  }: {
+    value: Map;
+    state: "selected" | "banned";
+  }) => {
+    // let filteredArray = [];
+    switch (state) {
+      case "selected": {
+        let filteredArray = selectedMaps.filter(
+          (item) => item.uuid !== value.uuid
+        );
+        setSelectedMaps(filteredArray);
+        break;
+      }
+      case "banned": {
+        let filteredArray = bannedMaps.filter(
+          (item) => item.uuid !== value.uuid
+        );
+        setBannedMaps(filteredArray);
+        break;
+      }
+    }
+  };
+
+  const random = (state: "selected" | "banned") => {
+    const remainingMaps = maps.filter(
+      (map) => !bannedMaps.includes(map) && !selectedMaps.includes(map)
+    );
+
+    if (remainingMaps.length === 0) {
+      // No available maps to select
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * remainingMaps.length);
+    const randomMap = remainingMaps[randomIndex];
+
+    switch (state) {
+      case "banned": {
+        setBannedMaps((currMaps) => [...currMaps, randomMap]);
+        break;
+      }
+      case "selected": {
+        setSelectedMaps((currMaps) => [...currMaps, randomMap]);
+        break;
+      }
+    }
+  };
+
   return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div>
+      <header className="w-full items-center justify-center flex p-10">
+        <h1 className="text-4xl font-bold">VALORANT Map Selector</h1>
+      </header>
+      <main className="h-full w-full flex flex-row justify-center items-start p-10">
+        {/* ALL MAPS */}
+        <div className="flex-1  justify-center items-center flex flex-col gap-4">
+          <h1 className="text-4xl p-3 font-bold">All Maps ({maps.length})</h1>
+          <div className="gap-4 flex">
+            <button
+              className="bg-green-500/10 hover:bg-green-500/25 text-green-500 py-2 px-4 rounded"
+              onClick={() => random("selected")}
+            >
+              Select Random
+            </button>
+            <button
+              className="bg-red-500/10 hover:bg-red-500/25 text-red-500 py-2 px-4 rounded"
+              onClick={() => random("banned")}
+            >
+              Ban Random
+            </button>
+          </div>
+          <div className="grid gap-4 justify-center items-center grid-cols-2">
+            {maps &&
+              maps.map((map: Map) => (
+                <div
+                  key={map.uuid}
+                  className={
+                    "relative  bg-opacity-50 group justify-center w-full h-full items-center flex cursor-default rounded overflow-hidden " +
+                    (selectedMaps.includes(map) && " bg-green-500 ") +
+                    (bannedMaps.includes(map) && " bg-red-500 ")
+                  }
+                >
+                  <div className="group-hover:flex absolute hidden z-50 bg-black bg-opacity-25 justify-center items-center w-full h-full gap-4">
+                    <button
+                      onClick={() => addSelect(map)}
+                      className="bg-green-500 py-2 px-4 rounded"
+                    >
+                      Select
+                    </button>
+                    <button
+                      onClick={() => addBan(map)}
+                      className="bg-red-500 py-2 px-4 rounded"
+                    >
+                      Ban
+                    </button>
+                  </div>
+                  <Image
+                    width={300}
+                    height={100}
+                    alt={`Map-${map.displayName}`}
+                    src={map.splash}
+                    className=" opacity-50 -z-40 transition-transform transform-gpu group-hover:scale-125"
+                  />
+
+                  <div className="absolute p-6  text-4xl z-1 font-bold">
+                    {map.displayName}
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
-      </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+        {/* SELECTED MAPS */}
+        <div className="flex-1 justify-center items-center flex flex-col gap-4">
+          <h1 className="text-4xl p-3 font-bold">Selected Maps ({selectedMaps.length})</h1>
+          <div className="grid gap-4 justify-center items-center grid-cols-1">
+            {selectedMaps &&
+              selectedMaps.map((map: Map) => (
+                <div
+                  onClick={() => remove({ value: map, state: "selected" })}
+                  key={map.uuid}
+                  className="relative  group justify-center w-full h-full items-center flex cursor-default rounded overflow-hidden "
+                >
+                  <Image
+                    width={300}
+                    height={100}
+                    alt={`Map-${map.displayName}`}
+                    src={map.splash}
+                    className=" opacity-50 -z-40 transition-transform transform-gpu group-hover:scale-125"
+                  />
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+                  <div className="absolute p-6  text-4xl z-1 font-bold">
+                    {map.displayName}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+        {/* BANNED MAPS */}
+        <div className="flex-1  justify-center items-center flex flex-col gap-4">
+          <h1 className="text-4xl p-3 font-bold">Banned Maps ({bannedMaps.length})</h1>
+          <div className="grid gap-4 justify-center items-center grid-cols-1">
+            {bannedMaps &&
+              bannedMaps.map((map: Map) => (
+                <div
+                  onClick={() => remove({ value: map, state: "banned" })}
+                  key={map.uuid}
+                  className="relative  group justify-center w-full h-full items-center flex cursor-default rounded overflow-hidden "
+                >
+                  <Image
+                    width={300}
+                    height={100}
+                    alt={`Map-${map.displayName}`}
+                    src={map.splash}
+                    className=" opacity-50 -z-40 transition-transform transform-gpu group-hover:scale-125"
+                  />
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+                  <div className="absolute p-6  text-4xl z-1 font-bold">
+                    {map.displayName}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      </main>
+      <footer className="bottom-1">All things reserved</footer>
+    </div>
+  );
 }
+
+type Map = {
+  uuid: string;
+  displayName: string;
+  narrativeDescription: string;
+  tacticalDescription: string;
+  coordinates: string;
+  displayIcon: string;
+  listViewIcon: string;
+  splash: string;
+  assetPath: string;
+  mapUrl: string;
+  xMultiplier: number;
+  yMultiplier: number;
+  xScalarToAdd: number;
+  yScalarToAdd: number;
+  callouts: [];
+};
