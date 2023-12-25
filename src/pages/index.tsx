@@ -2,7 +2,7 @@ import axios from "axios";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 
-export default function index() {
+export default function Index() {
   const [maps, setMaps] = useState([]);
   const [selectedMaps, setSelectedMaps] = useState<Map[]>([]);
   const [bannedMaps, setBannedMaps] = useState<Map[]>([]);
